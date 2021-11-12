@@ -1,3 +1,4 @@
+from typing import Text
 import bpy
 # from itertools import zip_longest
 
@@ -125,14 +126,22 @@ class fprop(bpy.types.PropertyGroup):
     
     name: bpy.props.StringProperty()
     id: bpy.props.PointerProperty(type=bpy.types.ID)
-    path: bpy.props.StringProperty()
-    data: bpy.props.FloatProperty()
+    fpath: bpy.props.StringProperty()
+    data: bpy.props.FloatProperty(
+        min = 0.0,
+        max = 1.0
+    )
     index: bpy.props.IntProperty()
     anim_index: bpy.props.IntProperty()
     mute: bpy.props.BoolProperty(
         default=True,
         update=update_bool
     )
+    controller: bpy.props.FloatProperty(
+        min = 0.0,
+        max = 1.0
+    )
+    value: bpy.props.FloatProperty()
     
     def fcurve(self):
         if not hasattr(self.id, "animation_data"):
@@ -146,14 +155,20 @@ class fprop(bpy.types.PropertyGroup):
         return fcurves[self.anim_index]
     
     def add_driver(self):
-        state = path_observer(self.id, self.path)
+        state = path_observer(self.id, self.fpath)
         if not state["anim_index"]:
             return
         try:
             fcurve_add(self, "data").hide = True
-            fix = fcurve_index_observer(self.id, self.path)
+            fix = fcurve_index_observer(self.id, self.fpath)
             if fix[0]:
                 self.anim_index = fix[1]
+                f = fcurve_add(self, "value")
+                f.hide = True
+                f.select = False
+                driver = f.driver
+                driver.use_self = True
+                driver.expression = "evaluate(self.id, self.anim_index, self.controller)"
             else:
                 self.remove_driver()
         except Exception as e:
@@ -163,19 +178,20 @@ class fprop(bpy.types.PropertyGroup):
     def remove_driver(self):
         try:
             self.driver_remove("data")
+            self.driver_remove("value")
         except Exception as e:
             print(e)
     
     def refresh(self):
-        self.path = self.path_from_id("data")
+        self.fpath = self.path_from_id("data")
         self.index = int(self.path_from_id()[-2])
     
     def rerouting_index(self):
-        fix = fcurve_index_observer(self.id, self.path, self.anim_index)
+        fix = fcurve_index_observer(self.id, self.fpath, self.anim_index)
         if fix[0]:
             return True
         elif fix[1] == "INDEX":
-            fix = fcurve_index_observer(self.id, self.path)
+            fix = fcurve_index_observer(self.id, self.fpath)
             if fix[0]:
                 self.anim_index = fix[1]
             return fix[0]
@@ -183,10 +199,10 @@ class fprop(bpy.types.PropertyGroup):
             return False
         
     def rerouting_path(self, path):
-        fix = fcurve_index_observer(self.id, self.path)
+        fix = fcurve_index_observer(self.id, self.fpath)
         if fix[0]:
             self.id.animation_data.drivers[fix[1]].data_path = path
-            self.path = path
+            self.fpath = path
         return fix[0]
 
 class FPROP_OT_add(bpy.types.Operator):
@@ -202,7 +218,7 @@ class FPROP_OT_add(bpy.types.Operator):
         
         block.name = "Curve "+str(len(fprop))
         block.id = scene
-        block.path = block.path_from_id("data")
+        block.fpath = block.path_from_id("data")
         block.index = int(block.path_from_id()[-2])
         block.add_driver()
         scene.active_fprop_index = len(fprop)-1
@@ -281,7 +297,7 @@ class OBJECT_PT_fprop(bpy.types.Panel):
             
             fcurve = block.fcurve()
             if fcurve:
-                if fcurve.data_path != block.path:
+                if fcurve.data_path != block.fpath:
                     fcurve = None
             if fcurve:
                 sub = layout.column()
@@ -292,8 +308,13 @@ class OBJECT_PT_fprop(bpy.types.Panel):
                 # col.prop(fcurve, "data_path", text="", icon="RNA")
                 # col.prop(block, "anim_index", text="Fcurve Index")
                 
-                row = sub.row()
-                row.prop(block, "data", text="fcurve")
+                col = sub.column()
+                col.use_property_split = True
+                col.use_property_decorate = False
+                #col.prop(block, "data", text="fcurve")
+                col.operator("screen.drivers_editor_show", text="Show FCurve Editor")
+                col.prop(block, "controller", text="controller")
+                col.prop(block, "value", text="value")
 
                 # sub.label(text="Display Color:")
                 # row = sub.row(align=True)
