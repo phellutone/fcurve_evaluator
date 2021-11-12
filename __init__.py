@@ -287,21 +287,23 @@ class OBJECT_PT_fprop(bpy.types.Panel):
                 sub = layout.column()
                 sub.label(text="data ("+block.name+")", icon="DOT")
                 
-                col = sub.column()
-                col.enabled = False
-                col.prop(fcurve, "data_path", text="", icon="RNA")
-                col.prop(block, "anim_index", text="Fcurve Index")
+                # col = sub.column()
+                # col.enabled = False
+                # col.prop(fcurve, "data_path", text="", icon="RNA")
+                # col.prop(block, "anim_index", text="Fcurve Index")
                 
-                sub.label(text="Display Color:")
+                row = sub.row()
+                row.prop(block, "data", text="fcurve")
+
+                # sub.label(text="Display Color:")
+                # row = sub.row(align=True)
+                # row.prop(fcurve, "color_mode", text="")
+                # rsb = row.row(align=True)
+                # rsb.enabled = fcurve.color_mode == "CUSTOM"
+                # rsb.prop(fcurve, "color", text="")
                 
-                row = sub.row(align=True)
-                row.prop(fcurve, "color_mode", text="")
-                rsb = row.row(align=True)
-                rsb.enabled = fcurve.color_mode == "CUSTOM"
-                rsb.prop(fcurve, "color", text="")
-                
-                sub.label(text="Auto Handle Smoothing:")
-                sub.prop(fcurve, "auto_smoothing", text="")
+                # sub.label(text="Auto Handle Smoothing:")
+                # sub.prop(fcurve, "auto_smoothing", text="")
             else:
                 sub = layout.column()
                 sub.label(text="recovoer index to access fcurve")
