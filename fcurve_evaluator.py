@@ -2,6 +2,17 @@ from typing import List, Union
 from enum import Enum
 import bpy
 
+bl_info = {
+    "name": "fcurve evaluator",
+    "author": "phellutone",
+    "version": (0, 1),
+    "blender": (2, 93, 0),
+    "location": "View3D > Sidebar > Tool Tab",
+    "description": "property interpolation with fcurve",
+    "warning": "work in progress",
+    "support": "TESTING",
+    "category": "Object"
+}
 
 class FCurveWrapper(bpy.types.PropertyGroup):
     class FCurveErrEnum(Enum):
