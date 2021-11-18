@@ -1,17 +1,17 @@
-from typing import List, Type, Union
-from enum import IntEnum, auto
+from typing import List, Union
+from enum import Enum
 import bpy
 
 
 class FCurveWrapper(bpy.types.PropertyGroup):
-    class FCurveErrEnum(IntEnum):
-        ID = auto()
-        ANIMATION_DATA = auto()
-        PATH = auto()
-        DUPLICATE = auto()
-    class WrapperErrEnum(IntEnum):
-        ID = auto()
-        PATH = auto()
+    class FCurveErrEnum(Enum):
+        ID = "ID"
+        ANIMATION_DATA = "ANIMATION_DATA"
+        PATH = "PATH"
+        DUPLICATE = "DUPLICATE"
+    class WrapperErrEnum(Enum):
+        ID = "ID"
+        PATH = "PATH"
 
     # bpy.types.Scene
     ID: bpy.props.PointerProperty(type=bpy.types.ID)
@@ -20,10 +20,16 @@ class FCurveWrapper(bpy.types.PropertyGroup):
     data: bpy.props.FloatProperty()
 
     # path to FCurveWrapper.data from FCurveWrapper.ID
-    path: bpy.props.StringProperty()
+    path: bpy.props.StringProperty(
+        default="undefined"
+    )
 
     # index number of FCurveWrapper.ID.animation_data.drivers
-    anim_index: bpy.props.FloatProperty()
+    anim_index: bpy.props.IntProperty(
+        default=-1
+    )
+
+    name: bpy.props.StringProperty()
     
     def wrapper_path_observer(self) -> Union[tuple[False, WrapperErrEnum], tuple[True, str]]:
         if self.ID != self.id_data:
@@ -44,7 +50,7 @@ class FCurveWrapper(bpy.types.PropertyGroup):
                     self.rerouting_fcurve(self.path, self.path_from_id("data"))
                 self.path = self.path_from_id("data")
 
-    def fcurve_path_observer(ID: bpy.types.ID, path: str) -> Union[tuple[False, FCurveErrEnum], tuple[True, int]]:
+    def fcurve_path_observer(self, ID: bpy.types.ID, path: str) -> Union[tuple[False, FCurveErrEnum], tuple[True, int]]:
         if not hasattr(ID, "animation_data"):
             return (False, FCurveWrapper.FCurveErrEnum.ID)
         if not ID.animation_data:
@@ -64,7 +70,7 @@ class FCurveWrapper(bpy.types.PropertyGroup):
                 raise Exception("invalid ID data-block")
             if frsn == FCurveWrapper.FCurveErrEnum.ANIMATION_DATA:
                 self.ID.animation_data_create()
-                frsn == FCurveWrapper.FCurveErrEnum.PATH
+                frsn = FCurveWrapper.FCurveErrEnum.PATH
             if frsn == FCurveWrapper.FCurveErrEnum.PATH:
                 self.add_driver("data")
                 _, frsn = self.fcurve_path_observer(self.ID, self.path)
@@ -116,14 +122,19 @@ class FCurveWrapper(bpy.types.PropertyGroup):
         f.data_path = new_path
 
 class FCurveEvaluator(bpy.types.PropertyGroup):
-    target: FCurveWrapper#bpy.props.PointerProperty(type=FCurveWrapper)
-    value: FCurveWrapper#bpy.props.PointerProperty(type=FCurveWrapper)
-    controller: bpy.props.FloatProperty()
+    target: bpy.props.PointerProperty(type=FCurveWrapper)
+    value: bpy.props.PointerProperty(type=FCurveWrapper)
+    controller: bpy.props.FloatProperty(
+        max=1.0,
+        min=0.0
+    )
 
     def update_bool(self, context):
-        f = self.target.fcurve()
-        if f:
-            f.mute = not self.mute
+        tf = self.target.fcurve()
+        vf = self.value.fcurve()
+        if tf and vf:
+            tf.mute = not self.mute
+            vf.mute = not self.mute
     mute: bpy.props.BoolProperty(
         default=True,
         update=update_bool
@@ -131,26 +142,36 @@ class FCurveEvaluator(bpy.types.PropertyGroup):
 
     index: bpy.props.IntProperty()
 
-    def init(self):
-        tf = self.target.fcurve().mute
-        tf.mute = True
+    def update_name(self, context):
+        self.target.name = self.name 
+    name: bpy.props.StringProperty(
+        update=update_name
+    )
 
-        vf = self.value.fcurve().mute
-        vf.mute = True
+    def init(self):
+        tf = self.target.fcurve()
+        tf.select = True
+
+        vf = self.value.fcurve()
+        vf.select = False
+        vf.hide = True
         vd = vf.driver
 
-        id = vf.variables.new()
+        id = vd.variables.new()
         id.name ="id"
+        id.targets[0].id_type = 'SCENE'
         id.targets[0].id = self.target.ID
         id.targets[0].data_path = "original"
 
-        anim_index = vf.variables.new()
+        anim_index = vd.variables.new()
         anim_index.name = "anim_index"
+        anim_index.targets[0].id_type = 'SCENE'
         anim_index.targets[0].id = self.target.ID
         anim_index.targets[0].data_path = self.target.path_from_id("anim_index")
 
-        controller = vf.variables.new()
+        controller = vd.variables.new()
         controller.name = "controller"
+        controller.targets[0].id_type = 'SCENE'
         controller.targets[0].id = self.id_data
         controller.targets[0].data_path = self.path_from_id("controller")
 
@@ -159,7 +180,6 @@ class FCurveEvaluator(bpy.types.PropertyGroup):
     def delete(self):
         self.target.remove_driver("data")
         self.value.remove_driver("data")
-        self.init()
 
 class FCurveEvaluator_OT_add(bpy.types.Operator):
     bl_idname = "fcurve_evaluator.add"
@@ -173,7 +193,9 @@ class FCurveEvaluator_OT_add(bpy.types.Operator):
         block: FCurveEvaluator = fcurve_evaluator.add()
 
         block.init()
-        scene.active_fcurve_evaluator_index = len(fcurve_evaluator)-1
+        block.index = len(fcurve_evaluator)-1
+        block.name = "Curve "+str(block.index+1)
+        scene.active_fcurve_evaluator_index = block.index
 
         return {'FINISHED'}
 
@@ -192,7 +214,7 @@ class FCurveEvaluator_OT_remove(bpy.types.Operator):
 
         block: FCurveEvaluator = fcurve_evaluator[index]
         block.delete()
-        block.remove(index)
+        fcurve_evaluator.remove(index)
         scene.active_fcurve_evaluator_index = min(max(0, index-1), len(fcurve_evaluator)-1)
 
         for b in fcurve_evaluator:
@@ -224,7 +246,7 @@ class OBJECT_PT_FCurveEvaluator(bpy.types.Panel):
     
     def draw(self, context):
         scene = context.scene
-        fcurve_evaluator: List[FCurveEvaluator] = scene.fprop
+        fcurve_evaluator: List[FCurveEvaluator] = scene.fcurve_evaluator
         index = scene.active_fcurve_evaluator_index
         layout = self.layout
         
@@ -240,20 +262,20 @@ class OBJECT_PT_FCurveEvaluator(bpy.types.Panel):
         col.operator("fcurve_evaluator.remove", icon="REMOVE", text="")
         
         if fcurve_evaluator:
-            block = fcurve_evaluator[index].target
+            block = fcurve_evaluator[index]
             
-            fcurve = block.fcurve()
+            fcurve = block.target.fcurve()
             if fcurve:
-                if fcurve.data_path != block.path:
+                if fcurve.data_path != block.target.path:
                     fcurve = None
             if fcurve:
                 sub = layout.column()
-                sub.label(text="data ("+block.name+")", icon="DOT")
+                sub.label(text="data ("+block.target.name+")", icon="DOT")
                 
-                col = sub.column()
-                col.use_property_split = True
-                col.use_property_decorate = False
-                col.operator("screen.drivers_editor_show", text="Show FCurve Editor")
+                row = sub.row()
+                row.prop(block, "controller", text="controller")
+                row.operator("screen.drivers_editor_show", text="Show FCurve Editor")
+                row.prop(block.value, "data", text="output")
             else:
                 sub = layout.column()
                 sub.label(text="recovoer index to access fcurve")
