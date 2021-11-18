@@ -201,6 +201,8 @@ class FCurveEvaluator_OT_add(bpy.types.Operator):
     def execute(self, context):
         scene: bpy.types.Scene = context.scene
         fcurve_evaluator: List[FCurveEvaluator] = scene.fcurve_evaluator
+        if not "evaluate" in bpy.app.driver_namespace:
+            bpy.app.driver_namespace["evaluate"] = lambda scene, anim_index, var: scene.animation_data.drivers[anim_index].evaluate(var)
         block: FCurveEvaluator = fcurve_evaluator.add()
 
         block.init()
@@ -252,7 +254,7 @@ class OBJECT_PT_FCurveEvaluator(bpy.types.Panel):
     bl_region_type = "UI"
     bl_category = "Tool"
     bl_idname = "VIEW3D_PT_fcurve_evaluator"
-    bl_label = "Property Interpolation"
+    bl_label = "FCurve Evaluator"
     bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
@@ -318,8 +320,6 @@ def register():
     
     bpy.types.Scene.fcurve_evaluator = bpy.props.CollectionProperty(type=FCurveEvaluator)
     bpy.types.Scene.active_fcurve_evaluator_index = bpy.props.IntProperty(update=update_index)
-    
-    bpy.app.driver_namespace["evaluate"] = lambda scene, anim_index, var: scene.animation_data.drivers[anim_index].evaluate(var)
         
 def unregister():
     for cls in classes:
