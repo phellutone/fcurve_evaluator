@@ -7,12 +7,12 @@
 bl_info = {
     "name": "fcurve evaluator",
     "author": "phellutone",
-    "version": (0, 1),
+    "version": (1, 0),
     "blender": (2, 93, 0),
     "location": "View3D > Sidebar > Tool Tab",
     "description": "property interpolation with fcurve",
     "support": "COMMUNITY",
-    "trcker_url": "https://github.com/phellutone/fcurve_evaluator/issues",
+    "tracker_url": "https://github.com/phellutone/fcurve_evaluator/issues",
     "category": "Object"
 }
 
