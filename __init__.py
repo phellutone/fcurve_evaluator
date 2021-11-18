@@ -199,11 +199,11 @@ class FCurveEvaluator_OT_add(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        scene: bpy.types.Scene = context.scene
-        fcurve_evaluator: List[FCurveEvaluator] = scene.fcurve_evaluator
+        scene = context.scene
+        fcurve_evaluator = scene.fcurve_evaluator
         if not "evaluate" in bpy.app.driver_namespace:
             bpy.app.driver_namespace["evaluate"] = lambda scene, anim_index, var: scene.animation_data.drivers[anim_index].evaluate(var)
-        block: FCurveEvaluator = fcurve_evaluator.add()
+        block = fcurve_evaluator.add()
 
         block.init()
         block.index = len(fcurve_evaluator)-1
@@ -220,12 +220,12 @@ class FCurveEvaluator_OT_remove(bpy.types.Operator):
 
     def execute(self, context):
         scene = context.scene
-        fcurve_evaluator: List[FCurveEvaluator] = scene.fcurve_evaluator
-        index: int = scene.active_fcurve_evaluator_index
+        fcurve_evaluator = scene.fcurve_evaluator
+        index = scene.active_fcurve_evaluator_index
         if index < 0 or not fcurve_evaluator:
             return {'CANCELLED'}
 
-        block: FCurveEvaluator = fcurve_evaluator[index]
+        block = fcurve_evaluator[index]
         block.delete()
         fcurve_evaluator.remove(index)
         scene.active_fcurve_evaluator_index = min(max(0, index-1), len(fcurve_evaluator)-1)
@@ -259,7 +259,7 @@ class OBJECT_PT_FCurveEvaluator(bpy.types.Panel):
     
     def draw(self, context):
         scene = context.scene
-        fcurve_evaluator: List[FCurveEvaluator] = scene.fcurve_evaluator
+        fcurve_evaluator = scene.fcurve_evaluator
         index = scene.active_fcurve_evaluator_index
         layout = self.layout
         
@@ -304,7 +304,7 @@ classes = (
 
 def update_index(self, context):
     scene = self
-    fcurve_evaluator: List[FCurveEvaluator] = scene.fcurve_evaluator
+    fcurve_evaluator = scene.fcurve_evaluator
     index = scene.active_fcurve_evaluator_index
     if index < 0 or not fcurve_evaluator:
         return
