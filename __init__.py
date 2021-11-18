@@ -1,5 +1,8 @@
-from .fcurve_wrapper import FCurveWrapper
-import bpy
+
+# Copyright (c) 2021 phellutone
+# Released under the MIT license
+# https://opensource.org/licenses/mit-license
+
 
 bl_info = {
     "name": "fcurve evaluator",
@@ -8,10 +11,19 @@ bl_info = {
     "blender": (2, 93, 0),
     "location": "View3D > Sidebar > Tool Tab",
     "description": "property interpolation with fcurve",
-    "warning": "work in progress",
-    "support": "TESTING",
+    "support": "COMMUNITY",
+    "trcker_url": "https://github.com/phellutone/fcurve_evaluator/issues",
     "category": "Object"
 }
+
+
+if "bpy" in locals():
+    import imp
+    imp.reload(FCurveWrapper)
+else:
+    from .fcurve_wrapper import FCurveWrapper
+
+import bpy
 
 
 
