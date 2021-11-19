@@ -7,7 +7,7 @@
 bl_info = {
     "name": "fcurve evaluator",
     "author": "phellutone",
-    "version": (1, 0),
+    "version": (1, 1),
     "blender": (2, 93, 0),
     "location": "View3D > Sidebar > Tool Tab",
     "description": "property interpolation with fcurve",
@@ -20,8 +20,10 @@ bl_info = {
 if "bpy" in locals():
     import imp
     imp.reload(FCurveWrapper)
+    imp.reload(re)
 else:
     from .fcurve_wrapper import FCurveWrapper
+    import re
 
 import bpy
 
@@ -62,6 +64,10 @@ class FCurveEvaluator(bpy.types.PropertyGroup):
         vf.select = False
         vf.hide = True
         vd = vf.driver
+
+        if re.search('evaluate\(.+,.+,.+\)', vd.expression):
+            for v in vd.variables:
+                vd.variables.remove(v)
 
         id = vd.variables.new()
         id.name ="id"
@@ -123,13 +129,14 @@ class FCurveEvaluator_OT_remove(bpy.types.Operator):
         block = fcurve_evaluator[index]
         block.delete()
         fcurve_evaluator.remove(index)
-        scene.active_fcurve_evaluator_index = min(max(0, index-1), len(fcurve_evaluator)-1)
 
         for b in fcurve_evaluator:
             if b.index < index:
                 continue
             b.index = b.index-1
             b.init()
+        
+        scene.active_fcurve_evaluator_index = min(max(0, index-1), len(fcurve_evaluator)-1)
         
         return {'FINISHED'}
 
@@ -219,6 +226,9 @@ def register():
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
+    
+    del bpy.types.Scene.fcurve_evaluator
+    del bpy.types.Scene.active_fcurve_evaluator_index
 
 if __name__ == "__main__":
     register()
