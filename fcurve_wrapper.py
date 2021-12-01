@@ -96,7 +96,7 @@ class FCurveWrapper(bpy.types.PropertyGroup):
             self.remove_driver(path)
             raise Exception("couldn't add driver")
     
-    def remove_driver(self, path: str):
+    def remove_driver(self, path: str) -> None:
         try:
             self.driver_remove(path)
         except Exception as e:
